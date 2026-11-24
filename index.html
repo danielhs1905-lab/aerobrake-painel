@@ -1,0 +1,413 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#10151e">
+<title>AeroBrake | Telemetria</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 20px;
+  background: #10151e;
+  color: #f4f6fa;
+  font-family: Arial, sans-serif;
+}
+
+.container {
+  max-width: 520px;
+  margin: auto;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.logo {
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.logo span {
+  color: #32d583;
+}
+
+.subtitle {
+  color: #8290a3;
+  font-size: 11px;
+  margin-top: 5px;
+  letter-spacing: 2px;
+}
+
+.status {
+  background: #252e3b;
+  padding: 9px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  color: #fbbf24;
+}
+
+.card {
+  background: #1a2330;
+  border: 1px solid #2a3545;
+  border-radius: 18px;
+  padding: 20px;
+  margin-bottom: 15px;
+}
+
+.section-title {
+  color: #8d9bae;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1.5px;
+}
+
+.speed-area {
+  text-align: center;
+  padding: 15px 0 5px;
+}
+
+.speed {
+  font-size: 76px;
+  font-weight: 800;
+  letter-spacing: -4px;
+  margin-top: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.unit {
+  color: #8d9bae;
+  font-size: 17px;
+}
+
+.progress {
+  background: #303b4b;
+  height: 9px;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 22px 0 10px;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: #32d583;
+  border-radius: 10px;
+  transition: width .2s;
+}
+
+.scale {
+  display: flex;
+  justify-content: space-between;
+  color: #8290a3;
+  font-size: 11px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.value {
+  font-size: 23px;
+  font-weight: bold;
+  margin-top: 13px;
+}
+
+.small {
+  color: #8290a3;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.state {
+  font-size: 19px;
+  font-weight: bold;
+  margin-top: 12px;
+}
+
+button {
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.connect {
+  background: #32d583;
+  color: #102018;
+}
+
+.disconnect {
+  background: #303b4b;
+  color: white;
+}
+
+button:disabled {
+  opacity: .45;
+}
+
+.footer {
+  text-align: center;
+  color: #64748b;
+  font-size: 11px;
+  margin-top: 25px;
+}
+
+.green {
+  color: #32d583;
+}
+
+.orange {
+  color: #fbbf24;
+}
+
+.red {
+  color: #fb7185;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<header>
+  <div>
+    <div class="logo">AERO<span>BRAKE</span></div>
+    <div class="subtitle">SISTEMA DE TELEMETRIA</div>
+  </div>
+  <div class="status" id="connection">● Desconectado</div>
+</header>
+
+<div class="card">
+  <div class="section-title">VELOCIDADE ATUAL</div>
+
+  <div class="speed-area">
+    <div class="speed" id="speed">0.0</div>
+    <div class="unit">km/h</div>
+  </div>
+
+  <div class="progress">
+    <div class="progress-fill" id="progress"></div>
+  </div>
+
+  <div class="scale">
+    <span>0 km/h</span>
+    <span>Limite: 12 km/h</span>
+  </div>
+</div>
+
+<div class="grid">
+
+  <div class="card">
+    <div class="section-title">MOTOR</div>
+    <div class="value" id="motor">--%</div>
+    <div class="small" id="motorState">Aguardando dados</div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">AEROFREIO</div>
+    <div class="value" id="servo">--°</div>
+    <div class="small" id="servoState">Aguardando dados</div>
+  </div>
+
+</div>
+
+<div class="card">
+  <div class="section-title">ESTADO DO SISTEMA</div>
+  <div class="state" id="systemState">Aguardando conexão</div>
+  <div class="small" id="detail">Conecte ao ESP32 para iniciar a telemetria.</div>
+</div>
+
+<div class="card">
+  <div class="section-title">CONEXÃO BLUETOOTH</div>
+  <button class="connect" id="connectButton">
+    CONECTAR AO AEROBRAKE
+  </button>
+  <button class="disconnect" id="disconnectButton" disabled>
+    DESCONECTAR
+  </button>
+  <div class="small" id="message">
+    Bluetooth aguardando conexão.
+  </div>
+</div>
+
+<div class="footer">
+  AEROBRAKE PROJECT • ESP32 BLE
+</div>
+
+</div>
+
+<script>
+const SERVICE_UUID =
+  "12345678-1234-1234-1234-1234567890ab";
+
+const CHARACTERISTIC_UUID =
+  "12345678-1234-1234-1234-1234567890ac";
+
+let device = null;
+let characteristic = null;
+
+const speedEl = document.getElementById("speed");
+const progressEl = document.getElementById("progress");
+const motorEl = document.getElementById("motor");
+const motorStateEl = document.getElementById("motorState");
+const servoEl = document.getElementById("servo");
+const servoStateEl = document.getElementById("servoState");
+const systemStateEl = document.getElementById("systemState");
+const detailEl = document.getElementById("detail");
+const connectionEl = document.getElementById("connection");
+const messageEl = document.getElementById("message");
+
+const connectButton = document.getElementById("connectButton");
+const disconnectButton = document.getElementById("disconnectButton");
+
+function setConnection(connected) {
+  connectionEl.textContent = connected
+    ? "● Conectado"
+    : "● Desconectado";
+
+  connectionEl.style.color = connected ? "#32d583" : "#fbbf24";
+
+  connectButton.disabled = connected;
+  disconnectButton.disabled = !connected;
+}
+
+function updatePanel(data) {
+  const speed = Number(data.velocidade ?? data.speed ?? 0);
+  const motor = Number(data.motor ?? data.pwm ?? 0);
+  const servo = Number(data.servo ?? 0);
+  const state = String(data.estado ?? data.state ?? "Desconhecido");
+
+  if (![speed, motor, servo].every(Number.isFinite)) {
+    return;
+  }
+
+  speedEl.textContent = Math.max(0, speed).toFixed(1);
+  progressEl.style.width =
+    Math.min(100, Math.max(0, speed / 12 * 100)) + "%";
+
+  if (speed >= 12) {
+    progressEl.style.background = "#fb7185";
+  } else {
+    progressEl.style.background = "#32d583";
+  }
+
+  motorEl.textContent = motor + "%";
+  motorStateEl.textContent =
+    motor > 0 ? "Motor acionado" : "Motor desligado";
+
+  servoEl.textContent = servo + "°";
+  servoStateEl.textContent =
+    servo >= 45 ? "Aerofreio aberto" : "Aerofreio fechado";
+
+  systemStateEl.textContent = state;
+  detailEl.textContent = "Dados recebidos em tempo real.";
+}
+
+function handleNotification(event) {
+  const value = event.target.value;
+  const decoder = new TextDecoder();
+
+  const message = decoder.decode(value);
+
+  try {
+    const data = JSON.parse(message);
+    updatePanel(data);
+    messageEl.textContent = "Telemetria recebida normalmente.";
+  } catch (error) {
+    messageEl.textContent = "Mensagem recebida: " + message;
+  }
+}
+
+async function connectBLE() {
+  try {
+    if (!navigator.bluetooth) {
+      throw new Error(
+        "Este navegador não oferece suporte ao Web Bluetooth."
+      );
+    }
+
+    messageEl.textContent = "Procurando AeroBrake...";
+
+    device = await navigator.bluetooth.requestDevice({
+      filters: [{ services: [SERVICE_UUID] }]
+    });
+
+    device.addEventListener(
+      "gattserverdisconnected",
+      disconnected
+    );
+
+    messageEl.textContent = "Conectando ao ESP32...";
+
+    const server = await device.gatt.connect();
+
+    const service = await server.getPrimaryService(
+      SERVICE_UUID
+    );
+
+    characteristic = await service.getCharacteristic(
+      CHARACTERISTIC_UUID
+    );
+
+    await characteristic.startNotifications();
+
+    characteristic.addEventListener(
+      "characteristicvaluechanged",
+      handleNotification
+    );
+
+    setConnection(true);
+    systemStateEl.textContent = "Conectado";
+    detailEl.textContent = "Aguardando telemetria do ESP32.";
+    messageEl.textContent = "Conexão estabelecida com sucesso!";
+
+  } catch (error) {
+    messageEl.textContent = "Falha: " + error.message;
+    console.error(error);
+  }
+}
+
+function disconnected() {
+  characteristic = null;
+  setConnection(false);
+  systemStateEl.textContent = "Desconectado";
+  detailEl.textContent = "Aguardando nova conexão.";
+  messageEl.textContent = "Bluetooth desconectado.";
+}
+
+function disconnectBLE() {
+  if (device && device.gatt.connected) {
+    device.gatt.disconnect();
+  }
+
+  disconnected();
+}
+
+connectButton.addEventListener("click", connectBLE);
+disconnectButton.addEventListener("click", disconnectBLE);
+
+if (!navigator.bluetooth) {
+  messageEl.textContent =
+    "Web Bluetooth não disponível neste navegador.";
+}
+</script>
+
+</body>
+</html>
